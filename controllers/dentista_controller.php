@@ -1,5 +1,4 @@
 <?php
-// controllers/dentista_controller.php
 session_start();
 require_once '../core/db_connection.php';
 require_once '../core/session_check.php';
@@ -11,6 +10,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     switch ($action) {
         case 'update_profile':
+            $foto_perfil_nome = null;
+
+            // Lógica de upload de imagem
+            if (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] == 0) {
+                $upload_dir = '../assets/uploads/';
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+                $max_size = 5 * 1024 * 1024; // 5 MB
+
+                if (in_array($_FILES['foto_perfil']['type'], $allowed_types) && $_FILES['foto_perfil']['size'] <= $max_size) {
+                    // Gera um nome único para o arquivo
+                    $file_extension = pathinfo($_FILES['foto_perfil']['name'], PATHINFO_EXTENSION);
+                    $foto_perfil_nome = uniqid('dentista_' . $id_dentista . '_') . '.' . $file_extension;
+                    
+                    if (!move_uploaded_file($_FILES['foto_perfil']['tmp_name'], $upload_dir . $foto_perfil_nome)) {
+                        header("Location: ../views/perfil.php?status=upload_error");
+                        exit();
+                    }
+                } else {
+                    header("Location: ../views/perfil.php?status=invalid_file");
+                    exit();
+                }
+            }
+            
+            // Lógica de atualização dos dados do formulário
             $nome = htmlspecialchars(strip_tags($_POST['nome']));
             $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
             $cro = htmlspecialchars(strip_tags($_POST['cro']));
@@ -20,12 +43,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 exit();
             }
 
-            $stmt = $conn->prepare("UPDATE dentistas SET nome = ?, email = ?, cro = ? WHERE id = ?");
-            $stmt->bind_param("sssi", $nome, $email, $cro, $id_dentista);
+            // Prepara a query SQL condicionalmente
+            if ($foto_perfil_nome !== null) {
+                // Se uma nova foto foi enviada, atualiza o campo foto_perfil
+                $stmt = $conn->prepare("UPDATE dentistas SET nome = ?, email = ?, cro = ?, foto_perfil = ? WHERE id = ?");
+                $stmt->bind_param("ssssi", $nome, $email, $cro, $foto_perfil_nome, $id_dentista);
+            } else {
+                // Se nenhuma foto foi enviada, não altera o campo foto_perfil
+                $stmt = $conn->prepare("UPDATE dentistas SET nome = ?, email = ?, cro = ? WHERE id = ?");
+                $stmt->bind_param("sssi", $nome, $email, $cro, $id_dentista);
+            }
 
             if ($stmt->execute()) {
-                // Atualiza o nome na sessão para refletir imediatamente na sidebar
                 $_SESSION['user_name'] = $nome;
+                if ($foto_perfil_nome !== null) {
+                    $_SESSION['user_photo'] = $foto_perfil_nome;
+                }
                 header("Location: ../views/perfil.php?status=profile_updated");
             } else {
                 header("Location: ../views/perfil.php?status=error");
@@ -38,7 +71,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $nova_senha = $_POST['nova_senha'];
             $confirmar_nova_senha = $_POST['confirmar_nova_senha'];
 
-            // 1. Validações básicas
             if (empty($senha_atual) || empty($nova_senha) || empty($confirmar_nova_senha)) {
                 header("Location: ../views/perfil.php?status=empty_fields");
                 exit();
@@ -47,39 +79,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 header("Location: ../views/perfil.php?status=password_mismatch");
                 exit();
             }
-            if (strlen($nova_senha) < 6) {
-                header("Location: ../views/perfil.php?status=password_short");
-                exit();
-            }
 
-            // 2. Verifica a senha atual
             $stmt = $conn->prepare("SELECT senha FROM dentistas WHERE id = ?");
             $stmt->bind_param("i", $id_dentista);
             $stmt->execute();
-            $result = $stmt->get_result();
-            $user = $result->fetch_assoc();
+            $user = $stmt->get_result()->fetch_assoc();
 
             if ($user && password_verify($senha_atual, $user['senha'])) {
-                // 3. Senha atual está correta, atualiza para a nova senha
                 $nova_senha_hash = password_hash($nova_senha, PASSWORD_DEFAULT);
                 $update_stmt = $conn->prepare("UPDATE dentistas SET senha = ? WHERE id = ?");
                 $update_stmt->bind_param("si", $nova_senha_hash, $id_dentista);
-
-                if ($update_stmt->execute()) {
-                    header("Location: ../views/perfil.php?status=password_updated");
-                } else {
-                    header("Location: ../views/perfil.php?status=error");
-                }
+                $update_stmt->execute();
+                header("Location: ../views/perfil.php?status=password_updated");
                 $update_stmt->close();
             } else {
-                // Senha atual incorreta
                 header("Location: ../views/perfil.php?status=current_password_wrong");
             }
             $stmt->close();
             break;
     }
 }
-
 $conn->close();
 exit();
 ?>

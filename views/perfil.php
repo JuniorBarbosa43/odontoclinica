@@ -2,22 +2,22 @@
 require_once '../core/session_check.php';
 require_once '../core/db_connection.php';
 
-// Buscar dados atuais do dentista
 $id_dentista = $_SESSION['user_id'];
-$stmt = $conn->prepare("SELECT nome, email, cro FROM dentistas WHERE id = ?");
+$stmt = $conn->prepare("SELECT nome, email, cro, foto_perfil FROM dentistas WHERE id = ?");
 $stmt->bind_param("i", $id_dentista);
 $stmt->execute();
 $dentista = $stmt->get_result()->fetch_assoc();
+$stmt->close();
 
-// Mapeamento de mensagens de status para o usuário
 $messages = [
     'profile_updated' => ['type' => 'success', 'text' => 'Perfil atualizado com sucesso!'],
     'password_updated' => ['type' => 'success', 'text' => 'Senha alterada com sucesso!'],
     'error' => ['type' => 'danger', 'text' => 'Ocorreu um erro ao processar sua requisição.'],
+    'upload_error' => ['type' => 'danger', 'text' => 'Erro ao mover o arquivo enviado.'],
+    'invalid_file' => ['type' => 'danger', 'text' => 'Arquivo inválido. Apenas JPG, PNG e GIF são permitidos (máx 5MB).'],
     'error_email' => ['type' => 'danger', 'text' => 'O formato do e-mail é inválido.'],
     'empty_fields' => ['type' => 'danger', 'text' => 'Todos os campos de senha são obrigatórios.'],
     'password_mismatch' => ['type' => 'danger', 'text' => 'A nova senha e a confirmação não correspondem.'],
-    'password_short' => ['type' => 'danger', 'text' => 'A nova senha deve ter pelo menos 6 caracteres.'],
     'current_password_wrong' => ['type' => 'danger', 'text' => 'A senha atual está incorreta.']
 ];
 $status_message = isset($_GET['status']) && isset($messages[$_GET['status']]) ? $messages[$_GET['status']] : null;
@@ -47,8 +47,18 @@ $status_message = isset($_GET['status']) && isset($messages[$_GET['status']]) ? 
 
             <div class="content-section" style="margin-bottom: 30px;">
                 <h2>Alterar Dados Pessoais</h2>
-                <form action="../controllers/dentista_controller.php" method="POST" class="form-container">
+                <form action="../controllers/dentista_controller.php" method="POST" class="form-container" enctype="multipart/form-data">
                     <input type="hidden" name="action" value="update_profile">
+                    
+                    <div class="profile-pic-container">
+                        <img src="../assets/uploads/<?php echo htmlspecialchars($dentista['foto_perfil'] ?? 'default.png'); ?>" alt="Foto de Perfil" class="profile-pic">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foto_perfil">Alterar Foto de Perfil (Opcional)</label>
+                        <input type="file" id="foto_perfil" name="foto_perfil" class="input-file">
+                    </div>
+
                     <div class="form-group">
                         <label for="nome">Nome Completo</label>
                         <input type="text" id="nome" name="nome" value="<?php echo htmlspecialchars($dentista['nome']); ?>" required>

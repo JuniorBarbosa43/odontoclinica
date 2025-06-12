@@ -1,9 +1,27 @@
 <?php
-// views/partials/sidebar.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 $current_page = basename($_SERVER['PHP_SELF']);
+
+// Busca a foto no banco de dados se ela ainda não estiver na sessão.
+// Isso evita uma consulta ao banco em cada carregamento de página.
+if (!isset($_SESSION['user_photo'])) {
+    require_once __DIR__ . '/../../core/db_connection.php';
+    if(isset($_SESSION['user_id'])) {
+        $stmt_photo = $conn->prepare("SELECT foto_perfil FROM dentistas WHERE id = ?");
+        $stmt_photo->bind_param("i", $_SESSION['user_id']);
+        $stmt_photo->execute();
+        $result_photo = $stmt_photo->get_result()->fetch_assoc();
+        $_SESSION['user_photo'] = $result_photo['foto_perfil'] ?? 'default.png';
+        $stmt_photo->close();
+    }
+}
+$user_photo = $_SESSION['user_photo'] ?? 'default.png';
 ?>
 <aside class="sidebar">
     <div class="sidebar-header">
+        <img src="../assets/uploads/<?php echo htmlspecialchars($user_photo); ?>" alt="Foto de Perfil" class="sidebar-profile-pic">
         <h2 class="sidebar-title">Odonto</h2>
         <span class="sidebar-subtitle">Clínica</span>
     </div>
@@ -29,16 +47,6 @@ $current_page = basename($_SERVER['PHP_SELF']);
             </li>
         </ul>
     </nav>
-    <div class="sidebar-footer">
-        <div class="user-info">
-            <span>Olá, <?php echo htmlspecialchars($_SESSION['user_name']); ?>!</span>
-        </div>
-        <a href="../auth/logout.php" class="btn-logout">
-            <i class="icon-logout"></i>
-            <span>Sair</span>
-        </a>
-    </div>
-</aside>
     <div class="sidebar-footer">
         <div class="user-info">
             <span>Olá, <?php echo htmlspecialchars($_SESSION['user_name']); ?>!</span>
