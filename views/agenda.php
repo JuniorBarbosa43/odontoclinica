@@ -2,7 +2,7 @@
 require_once '../core/session_check.php';
 require_once '../core/db_connection.php';
 
-// Busca as próximas consultas (de hoje em diante)
+// Busca as próximas consultas (de hoje em diante) para a tabela de lista
 $id_dentista = $_SESSION['user_id'];
 $consultas_result = $conn->prepare(
     "SELECT c.id, c.data_consulta, c.procedimento, c.status, p.nome as nome_paciente 
@@ -37,13 +37,18 @@ $consultas = $consultas_result->get_result();
                 </div>
             </header>
             
-            <div class="content-section" id="agenda-visual-container" style="margin-bottom: 30px;">
-                <h2>Agenda da Semana</h2>
-                <p>Em breve...</p>
+            <div class="content-section" style="margin-bottom: 30px;">
+                <div class="agenda-controls">
+                    <button id="prev-week" class="btn btn-secondary">&lt; Semana Anterior</button>
+                    <h2 id="current-week-display"></h2>
+                    <button id="next-week" class="btn btn-secondary">Próxima Semana &gt;</button>
+                </div>
+                <div id="agenda-visual">
+                    </div>
             </div>
 
             <div class="content-section">
-                <h2>Próximas Consultas</h2>
+                <h2>Próximas Consultas (Lista)</h2>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -82,5 +87,7 @@ $consultas = $consultas_result->get_result();
             </div>
         </main>
     </div>
+
+    <script src="../assets/js/agenda.js"></script>
 </body>
 </html>

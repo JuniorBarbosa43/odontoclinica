@@ -319,3 +319,126 @@ body {
 .status-cancelada {
     background-color: #ef4444; /* Vermelho */
 }
+
+/* assets/css/style.css - ADICIONAR NO FINAL */
+
+/* --- Estilos da Agenda Visual --- */
+.agenda-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.agenda-controls h2 {
+    color: #1e293b;
+    font-size: 1.5em;
+}
+
+#agenda-visual {
+    width: 100%;
+    overflow-x: auto; /* Para telas pequenas */
+}
+
+.agenda-header {
+    display: grid;
+    grid-template-columns: 80px repeat(7, 1fr); /* Coluna de horário + 7 dias */
+    font-weight: 600;
+    text-align: center;
+}
+
+.day-header {
+    padding: 10px;
+    border-left: 1px solid #e5e7eb;
+}
+.day-header span { display: block; }
+.day-header .day-number { font-size: 1.5em; color: #374151; }
+
+.slots-container {
+    display: grid;
+    grid-template-columns: 80px 1fr; /* Coluna de horário + container dos dias */
+}
+
+.times-column {
+    padding-top: 15px;
+}
+
+.time-label {
+    height: 60px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.9em;
+    position: relative;
+}
+.time-label::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: calc(100vw - 260px - 80px); /* Largura para preencher a tela */
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.days-container {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-left: 1px solid #e5e7eb;
+}
+
+.day-column {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #e5e7eb;
+}
+
+.time-slot {
+    height: 60px;
+    border-bottom: 1px dotted #e5e7eb;
+    position: relative;
+    padding: 2px;
+}
+
+.appointment-block {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-left: 3px solid #3b82f6;
+    border-radius: 4px;
+    padding: 5px;
+    font-size: 0.8em;
+    overflow: hidden;
+    height: 100%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.appointment-block:hover {
+    background-color: #bfdbfe;
+}
+.appointment-block strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.appointment-block a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* assets/css/style.css - ADICIONAR NO FINAL */
+
+/* --- Estilos do Link de Perfil na Sidebar --- */
+.sidebar-footer .user-info .profile-link {
+    display: block;
+    font-size: 0.85em;
+    color: #94a3b8;
+    text-decoration: underline;
+    margin-top: 5px;
+    transition: color 0.3s;
+}
+
+.sidebar-footer .user-info .profile-link:hover {
+    color: #fff;
+}
