@@ -32,3 +32,23 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </a>
     </div>
 </aside>
+// views/partials/sidebar.php
+
+// ... (código existente) ...
+            <li>
+                <a href="pacientes.php" class="<?php echo ($current_page == 'pacientes.php' || $current_page == 'paciente_form.php' || $current_page == 'paciente_detalhes.php') ? 'active' : ''; ?>">
+                    <i class="icon-patients"></i>
+                    <span>Pacientes</span>
+                </a>
+            </li>
+            
+            <li>
+                <a href="agenda.php" class="<?php echo ($current_page == 'agenda.php' || $current_page == 'consulta_form.php') ? 'active' : ''; ?>">
+                    <i class="icon-calendar"></i>
+                    <span>Agenda</span>
+                </a>
+            </li>
+            
+        </ul>
+    </nav>
+// ... (código existente) ...

@@ -57,14 +57,15 @@ $pacientes = $conn->query("SELECT id, nome, cpf, telefone FROM pacientes ORDER B
                                     <td><?php echo htmlspecialchars($paciente['nome']); ?></td>
                                     <td><?php echo htmlspecialchars($paciente['cpf']); ?></td>
                                     <td><?php echo htmlspecialchars($paciente['telefone']); ?></td>
-                                    <td class="actions-cell">
-                                        <a href="paciente_form.php?action=edit&id=<?php echo $paciente['id']; ?>" class="btn btn-sm btn-warning">Editar</a>
-                                        <form action="../controllers/paciente_controller.php" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.');">
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="id" value="<?php echo $paciente['id']; ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-                                        </form>
-                                    </td>
+<td class="actions-cell">
+    <a href="paciente_detalhes.php?id=<?php echo $paciente['id']; ?>" class="btn btn-sm btn-secondary">Ver Detalhes</a>
+    <a href="paciente_form.php?action=edit&id=<?php echo $paciente['id']; ?>" class="btn btn-sm btn-warning">Editar</a>
+    <form action="../controllers/paciente_controller.php" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.');">
+        <input type="hidden" name="action" value="delete">
+        <input type="hidden" name="id" value="<?php echo $paciente['id']; ?>">
+        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
+    </form>
+</td>
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
