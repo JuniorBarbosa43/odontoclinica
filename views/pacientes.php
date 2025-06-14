@@ -2,7 +2,55 @@
 require_once '../core/session_check.php';
 require_once '../core/db_connection.php';
 
-$pacientes = $conn->query("SELECT id, nome, cpf, telefone FROM pacientes ORDER BY nome ASC");
+// --- LÓGICA DE PAGINAÇÃO E BUSCA ---
+
+// 1. Definições da Paginação
+$limit = 15; // Itens por página
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+// 2. Lógica de Busca
+$search_term = $_GET['search'] ?? '';
+$params = [];
+$types = '';
+
+// 3. Monta a query para CONTAR o total de registros (para calcular as páginas)
+$count_sql = "SELECT COUNT(id) FROM pacientes";
+if (!empty($search_term)) {
+    $count_sql .= " WHERE nome LIKE ? OR cpf LIKE ?";
+    $like_term = "%{$search_term}%";
+    $params[] = $like_term;
+    $params[] = $like_term;
+    $types .= 'ss';
+}
+
+$stmt_count = $conn->prepare($count_sql);
+if (!empty($params)) {
+    $stmt_count->bind_param($types, ...$params);
+}
+$stmt_count->execute();
+$total_results = $stmt_count->get_result()->fetch_row()[0];
+$total_pages = ceil($total_results / $limit);
+$stmt_count->close();
+
+// 4. Monta a query para BUSCAR os registros da página atual
+$sql = "SELECT id, nome, cpf, telefone FROM pacientes";
+if (!empty($search_term)) {
+    // A query de busca é a mesma, só adicionamos a paginação
+    $sql .= " WHERE nome LIKE ? OR cpf LIKE ?";
+}
+$sql .= " ORDER BY nome ASC LIMIT ? OFFSET ?";
+
+// Adiciona os parâmetros de LIMIT e OFFSET
+$params[] = $limit;
+$params[] = $offset;
+$types .= 'ii';
+
+$stmt = $conn->prepare($sql);
+$stmt->bind_param($types, ...$params);
+$stmt->execute();
+$pacientes = $stmt->get_result();
+
 ?>
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -26,55 +74,47 @@ $pacientes = $conn->query("SELECT id, nome, cpf, telefone FROM pacientes ORDER B
                 </div>
             </header>
 
-            <?php if(isset($_GET['status'])): ?>
-                <div class="alert alert-<?php echo $_GET['status'] == 'error' || $_GET['status'] == 'error_fk' ? 'danger' : 'success'; ?>">
-                    <?php
-                        switch ($_GET['status']) {
-                            case 'created': echo 'Paciente adicionado com sucesso!'; break;
-                            case 'updated': echo 'Paciente atualizado com sucesso!'; break;
-                            case 'deleted': echo 'Paciente removido com sucesso!'; break;
-                            case 'error_fk': echo 'Erro: Não é possível remover pacientes com consultas agendadas.'; break;
-                            default: echo 'Ocorreu um erro ao processar a sua requisição.'; break;
-                        }
-                    ?>
-                </div>
-            <?php endif; ?>
+            <div class="search-container content-section" style="margin-bottom: 20px;">
+                <form action="pacientes.php" method="GET" class="search-form">
+                    <input type="text" name="search" placeholder="Buscar por nome ou CPF..." value="<?php echo htmlspecialchars($search_term); ?>" class="search-input">
+                    <button type="submit" class="btn btn-secondary">Buscar</button>
+                    <a href="pacientes.php" class="btn btn-secondary">Limpar</a>
+                </form>
+            </div>
 
             <div class="content-section">
                 <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Nome</th>
-                            <th>CPF</th>
-                            <th>Telefone</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
+                    <thead> ... </thead>
                     <tbody>
                         <?php if ($pacientes->num_rows > 0): ?>
                             <?php while($paciente = $pacientes->fetch_assoc()): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($paciente['nome']); ?></td>
-                                    <td><?php echo htmlspecialchars($paciente['cpf']); ?></td>
-                                    <td><?php echo htmlspecialchars($paciente['telefone']); ?></td>
-<td class="actions-cell">
-    <a href="paciente_detalhes.php?id=<?php echo $paciente['id']; ?>" class="btn btn-sm btn-secondary">Ver Detalhes</a>
-    <a href="paciente_form.php?action=edit&id=<?php echo $paciente['id']; ?>" class="btn btn-sm btn-warning">Editar</a>
-    <form action="../controllers/paciente_controller.php" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita.');">
-        <input type="hidden" name="action" value="delete">
-        <input type="hidden" name="id" value="<?php echo $paciente['id']; ?>">
-        <button type="submit" class="btn btn-sm btn-danger">Excluir</button>
-    </form>
-</td>
-                                </tr>
+                                <tr> ... </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
-                            <tr>
-                                <td colspan="4">Nenhum paciente cadastrado.</td>
-                            </tr>
+                            <tr> ... </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
+                
+                <div class="pagination-container">
+                    <?php if ($total_pages > 1): ?>
+                        <nav class="pagination">
+                            <?php if ($page > 1): ?>
+                                <a href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search_term); ?>" class="page-link">Anterior</a>
+                            <?php endif; ?>
+
+                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                <a href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search_term); ?>" class="page-link <?php if ($i == $page) echo 'active'; ?>">
+                                    <?php echo $i; ?>
+                                </a>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages): ?>
+                                <a href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search_term); ?>" class="page-link">Próxima</a>
+                            <?php endif; ?>
+                        </nav>
+                    <?php endif; ?>
+                </div>
             </div>
         </main>
     </div>

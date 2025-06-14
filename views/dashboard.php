@@ -4,18 +4,19 @@ require_once '../core/db_connection.php';
 
 $id_dentista = $_SESSION['user_id'];
 
-// Card 1: Total de Pacientes
+// --- DADOS DOS CARDS ---
+// Total de Pacientes
 $result_pacientes = $conn->query("SELECT COUNT(id) as total FROM pacientes");
 $total_pacientes = $result_pacientes->fetch_assoc()['total'];
 
-// Card 2: Consultas Agendadas para Hoje
-$stmt_hoje = $conn->prepare("SELECT COUNT(id) as total FROM consultas WHERE id_dentista = ? AND DATE(data_consulta) = CURDATE()");
+// Consultas Agendadas para Hoje
+$stmt_hoje = $conn->prepare("SELECT COUNT(id) as total FROM consultas WHERE id_dentista = ? AND DATE(data_consulta) = CURDATE() AND status = 'Agendada'");
 $stmt_hoje->bind_param("i", $id_dentista);
 $stmt_hoje->execute();
 $consultas_hoje = $stmt_hoje->get_result()->fetch_assoc()['total'];
 $stmt_hoje->close();
 
-// Card 3: Faturamento da Semana (Consultas com status 'Realizada')
+// Faturamento da Semana (Consultas 'Realizada')
 $stmt_semana = $conn->prepare(
     "SELECT COALESCE(SUM(valor), 0) as total 
      FROM consultas 
@@ -25,6 +26,34 @@ $stmt_semana->bind_param("i", $id_dentista);
 $stmt_semana->execute();
 $faturamento_semana = $stmt_semana->get_result()->fetch_assoc()['total'];
 $stmt_semana->close();
+
+
+// --- NOVOS DADOS DAS NOTIFICAÇÕES ---
+
+// 1. Aniversariantes do Dia
+$stmt_aniversario = $conn->prepare("SELECT nome FROM pacientes WHERE DAY(data_nascimento) = DAY(CURDATE()) AND MONTH(data_nascimento) = MONTH(CURDATE())");
+$stmt_aniversario->execute();
+$aniversariantes = $stmt_aniversario->get_result();
+$stmt_aniversario->close();
+
+// 2. Consultas para o Próximo Dia Útil
+// (Esta query é um pouco mais complexa, ela tenta encontrar o próximo dia que não seja domingo)
+$stmt_amanha = $conn->prepare(
+    "SELECT COUNT(id) as total 
+     FROM consultas 
+     WHERE id_dentista = ? AND status = 'Agendada' AND 
+           DATE(data_consulta) = (
+               SELECT CASE DAYOFWEEK(CURDATE())
+                   WHEN 6 THEN CURDATE() + INTERVAL 2 DAY -- Se hoje for Sexta, próximo dia útil é Segunda
+                   WHEN 7 THEN CURDATE() + INTERVAL 2 DAY -- Se hoje for Sábado, próximo dia útil é Segunda
+                   ELSE CURDATE() + INTERVAL 1 DAY
+               END
+           )"
+);
+$stmt_amanha->bind_param("i", $id_dentista);
+$stmt_amanha->execute();
+$consultas_amanha = $stmt_amanha->get_result()->fetch_assoc()['total'];
+$stmt_amanha->close();
 
 ?>
 <!DOCTYPE html>
@@ -41,45 +70,54 @@ $stmt_semana->close();
         <main class="main-content">
             <header class="main-header-content">
                 <h1>Dashboard</h1>
-                <p>Resumo geral da sua clínica.</p>
+                <p>Resumo geral e notificações importantes da sua clínica.</p>
             </header>
 
             <div class="dashboard-cards">
-                <a href="pacientes.php" class="card-link">
-                    <div class="card">
-                        <div class="card-icon icon-patients"></div>
-                        <div class="card-info">
-                            <p>Total de Pacientes</p>
-                            <h3><?php echo $total_pacientes; ?></h3>
-                        </div>
-                    </div>
-                </a>
-                
-                <a href="agenda.php" class="card-link">
-                    <div class="card">
-                        <div class="card-icon icon-appointments"></div>
-                        <div class="card-info">
-                            <p>Consultas Hoje</p>
-                            <h3><?php echo $consultas_hoje; ?></h3>
-                        </div>
-                    </div>
-                </a>
-                
-                <a href="#" class="card-link">
-                    <div class="card">
-                        <div class="card-icon icon-revenue"></div>
-                        <div class="card-info">
-                            <p>Faturamento da Semana</p>
-                            <h3>R$ <?php echo number_format($faturamento_semana, 2, ',', '.'); ?></h3>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <div class="content-section">
-                <h2>Próximas Atividades</h2>
-                <p>Abaixo você pode ver sua agenda visual. Para ver a lista completa de consultas, <a href="agenda.php">clique aqui</a>.</p>
                 </div>
+
+            <div class="notifications-section">
+                <h2>Notificações</h2>
+                <div class="notifications-container">
+                    
+                    <div class="notification-item">
+                        <div class="notification-icon icon-appointments">🗓️</div>
+                        <div class="notification-content">
+                            <h4>Próximas Consultas</h4>
+                            <?php if ($consultas_amanha > 0): ?>
+                                <p>Você tem <strong><?php echo $consultas_amanha; ?></strong> consulta(s) agendada(s) para o próximo dia útil.</p>
+                            <?php else: ?>
+                                <p>Nenhuma consulta agendada para o próximo dia útil.</p>
+                            <?php endif; ?>
+                            <a href="agenda.php">Ver agenda</a>
+                        </div>
+                    </div>
+
+                    <div class="notification-item">
+                        <div class="notification-icon icon-birthday">🎂</div>
+                        <div class="notification-content">
+                            <h4>Aniversariantes de Hoje</h4>
+                            <?php if ($aniversariantes->num_rows > 0): ?>
+                                <p>Parabéns para: 
+                                    <strong>
+                                    <?php 
+                                        $nomes = [];
+                                        while($aniversariante = $aniversariantes->fetch_assoc()) {
+                                            $nomes[] = $aniversariante['nome'];
+                                        }
+                                        echo implode(', ', $nomes);
+                                    ?>
+                                    </strong>!
+                                </p>
+                            <?php else: ?>
+                                <p>Nenhum paciente faz aniversário hoje.</p>
+                            <?php endif; ?>
+                            <a href="pacientes.php">Ver pacientes</a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </main>
     </div>
 </body>
