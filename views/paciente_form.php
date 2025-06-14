@@ -82,5 +82,6 @@ if ($action == 'edit') {
             </div>
         </main>
     </div>
+        <script src="../assets/js/masks.js"></script>
 </body>
 </html>

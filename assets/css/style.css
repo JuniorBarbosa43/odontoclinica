@@ -524,3 +524,10 @@ body {
     width: 100%;
     background-color: #fff;
 }
+/* assets/css/style.css - ADICIONAR NO FINAL */
+
+/* Estilo para o botão de informação (lembrete) */
+.btn-info {
+    background-color: #0ea5e9; /* Ciano */
+    color: #fff;
+}
